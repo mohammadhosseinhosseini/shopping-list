@@ -125,7 +125,7 @@ const index = () => {
                                         deleteHandler={deleteProductFromCart}
                                         checkHandler={checkProduct}
                                         cart
-                                        chandleChangeAmount={changeAmount}
+                                        changeAmountHandler={changeAmount}
                                     />
                                 ))}
                         </div>
