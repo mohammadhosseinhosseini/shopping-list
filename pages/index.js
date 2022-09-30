@@ -9,6 +9,8 @@ import {
     query,
     where,
     onSnapshot,
+    orderBy,
+    limit,
 } from 'firebase/firestore'
 import { AlertTitle, Alert, Divider, Skeleton, Button } from '@mui/material'
 import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox'
@@ -18,7 +20,7 @@ import Product from '../components/Product'
 
 const productsRef = collection(db, 'products')
 
-const index = () => {
+const index = ({ setAlert, editNote }) => {
     const [loading, setLoading] = useState(true)
     const [products, setProducts] = useState([])
 
@@ -30,6 +32,7 @@ const index = () => {
             querySnapshot.forEach((doc) => {
                 temp.push({ ...doc.data(), id: doc.id })
             })
+            temp.sort((a, b) => b.date - a.date)
             setProducts(temp)
             setLoading(false)
         })
@@ -45,13 +48,17 @@ const index = () => {
 
     const deleteProductFromCart = async (id) => {
         try {
-            console.log(id)
             await updateDoc(docFirebase(db, 'products', id), {
                 inCart: false,
                 amount: 1,
                 checked: false,
+                date: new Date(),
             })
-            setProducts((pre) => pre.filter((product) => product.id != id))
+            setAlert({
+                open: true,
+                severity: 'info',
+                message: 'Product removed from cart',
+            })
         } catch (error) {
             console.log(error)
         }
@@ -62,6 +69,7 @@ const index = () => {
             console.log(id)
             await updateDoc(docFirebase(db, 'products', id), {
                 checked: !isChecked,
+                date: new Date(),
             })
         } catch (error) {
             console.log(error)
@@ -83,6 +91,16 @@ const index = () => {
         }
     }
 
+    const resetAmount = async (id) => {
+        try {
+            await updateDoc(docFirebase(db, 'products', id), {
+                amount: 1,
+            })
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
     const checkedProducts = products.filter((product) => product.checked)
     const uncheckedProducts = products.filter((product) => !product.checked)
 
@@ -97,6 +115,7 @@ const index = () => {
             querySnapshot.forEach(async (doc) => {
                 await updateDoc(docFirebase(db, 'products', doc.id), {
                     checked,
+                    date: new Date(),
                 })
             })
         } catch (error) {
@@ -141,10 +160,11 @@ const index = () => {
                 <h2 className='my-0 me-4'>
                     total:{' '}
                     {products
-                        .map((p) => p.amount * p.price)
+                        .map((p) => parseInt(p.amount) * parseFloat(p.price))
                         .reduce((accumulator, value) => {
                             return accumulator + value
-                        }, 0)}{' '}
+                        }, 0)
+                        .toFixed(2)}{' '}
                     €
                 </h2>
                 {uncheckedProducts.length > 0 && (
@@ -178,6 +198,9 @@ const index = () => {
                                     checkHandler={checkProduct}
                                     cart
                                     changeAmountHandler={changeAmount}
+                                    editNoteHandler={editNote}
+                                    note={product.note}
+                                    resetAmountHandler={resetAmount}
                                 />
                             ))}
                         </div>
@@ -217,6 +240,9 @@ const index = () => {
                                 checkHandler={checkProduct}
                                 cart
                                 changeAmountHandler={changeAmount}
+                                editNoteHandler={editNote}
+                                note={product.note}
+                                resetAmountHandler={resetAmount}
                             />
                         ))}
                     </div>

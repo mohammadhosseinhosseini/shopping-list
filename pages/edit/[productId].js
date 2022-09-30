@@ -1,6 +1,15 @@
-import { Button, TextField, Snackbar, IconButton, Alert } from '@mui/material'
-import React, { useRef, useState } from 'react'
-import { collection, addDoc } from 'firebase/firestore'
+import { useRouter } from 'next/router'
+
+import { Button, TextField } from '@mui/material'
+import React, { useRef, useState, useEffect } from 'react'
+import {
+    collection,
+    addDoc,
+    doc as docFirebase,
+    getDoc,
+    updateDoc,
+    onSnapshot,
+} from 'firebase/firestore'
 import LoadingButton from '@mui/lab/LoadingButton'
 import CloseIcon from '@mui/icons-material/Close'
 import DriveFolderUploadIcon from '@mui/icons-material/DriveFolderUpload'
@@ -14,13 +23,12 @@ import {
     deleteObject,
 } from 'firebase/storage'
 import { v4 } from 'uuid'
-import Compressor from 'compressorjs'
 import imageCompression from 'browser-image-compression'
 
-import { db, storage } from '../firebase/db'
-import Product from '../components/Product'
+import { db, storage } from '../../firebase/db'
+import Product from '../../components/Product'
 
-const add = ({ setAlert }) => {
+const editProduct = ({ setAlert, editNote }) => {
     const [loading, setLoading] = useState(false)
     const [canUpload, setCanUpload] = useState(true)
     const [previewImage, setPreviewImage] = useState(null)
@@ -32,8 +40,54 @@ const add = ({ setAlert }) => {
     const [price, setPrice] = useState('')
     const [note, setNote] = useState('')
 
-    const addProduct = async (toProducts = true) => {
-        if (name == '' || price == '' || imageUpload == null) {
+    const [productExists, setProductExists] = useState(false)
+
+    const router = useRouter()
+    const { productId } = router.query
+
+    useEffect(() => {
+        const getProduct = async () => {
+            console.log(productId)
+            if (productId) {
+                const docRef = docFirebase(db, 'products', productId)
+
+                const unsub = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        console.log('Document data:', docSnap.data())
+                        setName(docSnap.data().name)
+                        setPrice(docSnap.data().price)
+                        setImage(docSnap.data().image)
+                        setNote(docSnap.data().note)
+                        setProductExists(true)
+                    } else {
+                        // doc.data() will be undefined in this case
+                        console.log('No such document!')
+                        setAlert({
+                            open: true,
+                            message: 'Product not found',
+                            severity: 'error',
+                        })
+                        return
+                    }
+                })
+
+                // const docSnap = await getDoc(docRef)
+            }
+        }
+        getProduct()
+    }, [productId])
+
+    const editProduct = async (toProducts = true) => {
+        if (!productExists) {
+            setAlert({
+                open: true,
+                message: 'Product not found',
+                severity: 'error',
+            })
+            return
+        }
+
+        if (name == '' || price == '') {
             setAlert({
                 open: true,
                 message: 'Please fill all the fields',
@@ -43,32 +97,24 @@ const add = ({ setAlert }) => {
         }
 
         setLoading(true)
-
         try {
-            const productsRef = collection(db, 'products')
-            const newProduct = await addDoc(productsRef, {
+            await updateDoc(docFirebase(db, 'products', productId), {
                 name: name,
                 price: parseFloat(price),
-                image: await handleUpload(),
+                image: imageUpload ? await handleUpload() : image,
                 inCart: !toProducts,
-                checked: false,
-                amount: 1,
-                note,
                 date: new Date(),
+
+                // note,
             })
-            console.log(newProduct)
+
             setAlert({
                 open: true,
-                message: 'Product added successfully',
+                message: 'Product updated successfully',
                 severity: 'success',
             })
-            setName('')
-            setPrice('')
-            setNote('')
-            setImage(null)
-            setImageUpload(null)
-            setPreviewImage(null)
         } catch (error) {
+            console.log(error)
             setAlert({
                 open: true,
                 message: 'Something went wrong',
@@ -91,8 +137,10 @@ const add = ({ setAlert }) => {
         if (image != null) {
             const imageRef = ref(storage, image)
             await deleteObject(imageRef)
+            console.log('deleted: ' + image)
         }
 
+        const imageRef = ref(storage, `images/${v4() + '_' + imageUpload.name}`)
         try {
             const compressedFile = await imageCompression(imageUpload, {
                 maxSizeMB: 0.1,
@@ -109,12 +157,6 @@ const add = ({ setAlert }) => {
             )
             const snapshot = await uploadBytes(imageRef, compressedFile)
             setCanUpload(false)
-
-            setAlert({
-                open: true,
-                message: 'Image uploaded successfully',
-                severity: 'success',
-            })
 
             return getDownloadURL(snapshot.ref).then((url) => {
                 setImage(url)
@@ -146,7 +188,7 @@ const add = ({ setAlert }) => {
         setPreviewImage(source)
     }
 
-    const canAdd = name != '' && price != '' && imageUpload != null
+    const canAdd = name != '' && price != ''
 
     return (
         <div className='container' style={{ maxWidth: '576px' }}>
@@ -198,26 +240,26 @@ const add = ({ setAlert }) => {
                 <div className='d-flex mt-3'>
                     <LoadingButton
                         variant='outlined'
-                        onClick={addProduct}
+                        onClick={editProduct}
                         loading={loading}
                         disabled={!canAdd}
                         fullWidth
                         endIcon={<Inventory2TwoToneIcon />}
                     >
-                        Add to Products
+                        Edit and Add to Products
                     </LoadingButton>
                     <div className='mx-2'></div>
                     <LoadingButton
                         variant='outlined'
                         onClick={() => {
-                            addProduct(false)
+                            editProduct(false)
                         }}
                         loading={loading}
                         disabled={!canAdd}
                         fullWidth
                         endIcon={<AddShoppingCartIcon />}
                     >
-                        Add to Cart
+                        Edit and Add to Cart
                     </LoadingButton>
                 </div>
 
@@ -225,16 +267,15 @@ const add = ({ setAlert }) => {
                     className='mt-4'
                     name={name}
                     price={price}
-                    image={previewImage}
-                    editNoteHandler={(note) => {
-                        setNote(note)
-                    }}
                     note={note}
+                    id={productId}
+                    image={previewImage || image}
                     inEdit
+                    editNoteHandler={editNote}
                 />
             </div>
         </div>
     )
 }
 
-export default add
+export default editProduct

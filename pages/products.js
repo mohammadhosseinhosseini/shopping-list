@@ -32,7 +32,7 @@ import { db, storage } from '../firebase/db'
 import Product from '../components/Product'
 
 const productsRef = collection(db, 'products')
-const products = () => {
+const products = ({ setAlert, editNote }) => {
     const [products, setProducts] = useState([])
     const [open, setOpen] = useState(false)
     const [deleteProductID, setDeleteProductID] = useState(null)
@@ -48,6 +48,7 @@ const products = () => {
             querySnapshot.forEach((doc) => {
                 temp.push({ ...doc.data(), id: doc.id })
             })
+            temp.sort((a, b) => b.date - a.date)
             setProducts(temp)
         })
 
@@ -62,11 +63,16 @@ const products = () => {
 
     const addProductToCart = async (id) => {
         try {
-            console.log(id)
             await updateDoc(docFirebase(db, 'products', id), {
                 inCart: true,
+                date: new Date(),
             })
-            setProducts((pre) => pre.filter((product) => product.id != id))
+
+            setAlert({
+                open: true,
+                severity: 'info',
+                message: 'Product added to cart',
+            })
         } catch (error) {
             console.log(error)
         }
@@ -82,7 +88,11 @@ const products = () => {
                     storage,
                     products.find((p) => p.id == deleteProductID).image
                 )
-                await deleteObject(imageRef)
+                try {
+                    await deleteObject(imageRef)
+                } catch (error) {
+                    console.log(error)
+                }
             }
 
             await deleteDoc(docFirebase(db, 'products', deleteProductID))
@@ -90,6 +100,11 @@ const products = () => {
                 pre.filter((product) => product.id != deleteProductID)
             )
             console.log('deleted:' + deleteProductID)
+            setAlert({
+                open: true,
+                severity: 'success',
+                message: 'Product deleted successfully',
+            })
         } catch (error) {
             console.log(error)
         }
@@ -117,11 +132,13 @@ const products = () => {
                             name={product.name}
                             price={product.price}
                             image={product.image}
+                            note={product.note}
                             id={product.id}
                             className='col'
                             addHandler={addProductToCart}
                             deleteHandler={handleClickOpen}
                             editHandler={editProduct}
+                            editNoteHandler={editNote}
                         />
                     ))}
                 </div>

@@ -44,6 +44,7 @@ const Products = ({ cart }) => {
             console.log(id)
             await updateDoc(docFirebase(db, 'products', id), {
                 inCart: !cart,
+                date: new Date(),
             })
             setProducts((pre) => pre.filter((product) => product.id != id))
         } catch (error) {

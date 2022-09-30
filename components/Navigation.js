@@ -10,18 +10,18 @@ import { useRouter } from 'next/router'
 import Inventory2TwoToneIcon from '@mui/icons-material/Inventory2TwoTone'
 import ShoppingCartTwoToneIcon from '@mui/icons-material/ShoppingCartTwoTone'
 import AddCircleTwoToneIcon from '@mui/icons-material/AddCircleTwoTone'
+import EditTwoToneIcon from '@mui/icons-material/EditTwoTone'
 
 export default function Naviagtion() {
-    const [value, setValue] = React.useState(null)
+    const [value, setValue] = React.useState('')
 
     const router = useRouter()
 
     useEffect(() => {
-        setValue(router.pathname)
-    }, [])
+        setValue(router.asPath)
+    }, [router])
 
     const changeRoute = (event, newValue) => {
-        setValue(newValue)
         router.push(
             window.location.protocol +
                 '//' +
@@ -29,7 +29,9 @@ export default function Naviagtion() {
                 (window.location.port ? ':' + window.location.port : '') +
                 newValue
         )
+        setValue(newValue)
     }
+
     return (
         <Box
             style={{
@@ -60,6 +62,13 @@ export default function Naviagtion() {
                     value='/products'
                     icon={<Inventory2TwoToneIcon />}
                 />
+                {value.includes('/edit') && (
+                    <BottomNavigationAction
+                        label='Edit'
+                        value={value.includes('/edit') ? value : '/edit'}
+                        icon={<EditTwoToneIcon />}
+                    />
+                )}
             </BottomNavigation>
         </Box>
     )

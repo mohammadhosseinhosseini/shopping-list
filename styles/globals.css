@@ -5,6 +5,7 @@
     font-family: 'Vazirmatn', sans-serif;
 }
 
-input {
+input,
+textarea {
     font-family: 'Vazirmatn', sans-serif !important;
 }
