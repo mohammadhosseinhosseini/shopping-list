@@ -10,7 +10,8 @@ import {
     where,
     onSnapshot,
 } from 'firebase/firestore'
-import { AlertTitle, Alert, Divider, Skeleton } from '@mui/material'
+import { AlertTitle, Alert, Divider, Skeleton, Button } from '@mui/material'
+import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox'
 
 import { db, storage } from '../firebase/db'
 import Product from '../components/Product'
@@ -82,6 +83,27 @@ const index = () => {
         }
     }
 
+    const checkedProducts = products.filter((product) => product.checked)
+    const uncheckedProducts = products.filter((product) => !product.checked)
+
+    const toggleCheckAllProducts = async (checked) => {
+        try {
+            const q = query(
+                collection(db, 'products'),
+                where('checked', '==', !checked),
+                where('inCart', '==', true)
+            )
+            const querySnapshot = await getDocs(q)
+            querySnapshot.forEach(async (doc) => {
+                await updateDoc(docFirebase(db, 'products', doc.id), {
+                    checked,
+                })
+            })
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
     if (loading) {
         return (
             <div className='container'>
@@ -115,50 +137,34 @@ const index = () => {
 
     return (
         <div className='container'>
-            <h2 className='mb-3'>
-                total:{' '}
-                {products
-                    .map((p) => p.amount * p.price)
-                    .reduce((accumulator, value) => {
-                        return accumulator + value
-                    }, 0)}{' '}
-                €
-            </h2>
+            <div className='d-flex align-items-center mb-3'>
+                <h2 className='my-0 me-4'>
+                    total:{' '}
+                    {products
+                        .map((p) => p.amount * p.price)
+                        .reduce((accumulator, value) => {
+                            return accumulator + value
+                        }, 0)}{' '}
+                    €
+                </h2>
+                {uncheckedProducts.length > 0 && (
+                    <Button
+                        variant='outlined'
+                        endIcon={<IndeterminateCheckBoxIcon />}
+                        onClick={() => {
+                            toggleCheckAllProducts(true)
+                        }}
+                    >
+                        Check all
+                    </Button>
+                )}
+            </div>
+
             {products.length > 0 ? (
                 <>
-                    {products.filter(({ checked }) => !checked).length > 0 ? (
+                    {uncheckedProducts.length > 0 ? (
                         <div className='row row-cols-1 row-cols-lg-2'>
-                            {products
-                                .filter(({ checked }) => !checked)
-                                .map((product, index) => (
-                                    <Product
-                                        key={product.id}
-                                        name={product.name}
-                                        price={product.price}
-                                        image={product.image}
-                                        checked={product.checked}
-                                        amount={product.amount}
-                                        id={product.id}
-                                        className='col'
-                                        deleteHandler={deleteProductFromCart}
-                                        checkHandler={checkProduct}
-                                        cart
-                                        changeAmountHandler={changeAmount}
-                                    />
-                                ))}
-                        </div>
-                    ) : (
-                        <Alert severity='info' className=''>
-                            <AlertTitle>Info</AlertTitle>
-                            You purchased all the products in your cart!
-                        </Alert>
-                    )}
-                    <Divider className='w-100 my-4' />
-                    <h2>Checked</h2>
-                    <div className='row row-cols-1 row-cols-lg-2'>
-                        {products
-                            .filter(({ checked }) => checked)
-                            .map((product, index) => (
+                            {uncheckedProducts.map((product, index) => (
                                 <Product
                                     key={product.id}
                                     name={product.name}
@@ -174,6 +180,45 @@ const index = () => {
                                     changeAmountHandler={changeAmount}
                                 />
                             ))}
+                        </div>
+                    ) : (
+                        <Alert severity='info' className=''>
+                            <AlertTitle>Info</AlertTitle>
+                            You purchased all the products in your cart!
+                        </Alert>
+                    )}
+                    <Divider className='w-100 my-4' />
+                    <div className='d-flex align-items-center'>
+                        <h2 className='my-0 me-4'>Checked</h2>
+                        {checkedProducts.length > 0 && (
+                            <Button
+                                variant='outlined'
+                                endIcon={<IndeterminateCheckBoxIcon />}
+                                onClick={() => {
+                                    toggleCheckAllProducts(false)
+                                }}
+                            >
+                                Uncheck all
+                            </Button>
+                        )}
+                    </div>
+                    <div className='row row-cols-1 row-cols-lg-2'>
+                        {checkedProducts.map((product, index) => (
+                            <Product
+                                key={product.id}
+                                name={product.name}
+                                price={product.price}
+                                image={product.image}
+                                checked={product.checked}
+                                amount={product.amount}
+                                id={product.id}
+                                className='col'
+                                deleteHandler={deleteProductFromCart}
+                                checkHandler={checkProduct}
+                                cart
+                                changeAmountHandler={changeAmount}
+                            />
+                        ))}
                     </div>
                 </>
             ) : (
