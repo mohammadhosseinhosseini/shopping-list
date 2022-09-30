@@ -4,7 +4,12 @@ import { collection, addDoc } from 'firebase/firestore'
 import LoadingButton from '@mui/lab/LoadingButton'
 import CloseIcon from '@mui/icons-material/Close'
 import DriveFolderUploadIcon from '@mui/icons-material/DriveFolderUpload'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import {
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject,
+} from 'firebase/storage'
 import { v4 } from 'uuid'
 
 import { db, storage } from '../firebase/db'
@@ -81,31 +86,35 @@ const add = () => {
         }
         setImageLoading(true)
 
+        if (image != null) {
+            const imageRef = ref(storage, image)
+            await deleteObject(imageRef)
+        }
+
         const imageRef = ref(storage, `images/${v4() + '_' + imageUpload.name}`)
+        try {
+            const snapshot = await uploadBytes(imageRef, imageUpload)
 
-        uploadBytes(imageRef, imageUpload)
-            .then((snapshot) => {
-                setAlert({
-                    open: true,
-                    message: 'Image uploaded successfully',
-                    severity: 'success',
-                })
-
-                getDownloadURL(snapshot.ref).then((url) => {
-                    setImage(url)
-                    console.log(url)
-                })
-
-                setCanUpload(false)
+            setAlert({
+                open: true,
+                message: 'Image uploaded successfully',
+                severity: 'success',
             })
-            .catch((error) => {
-                console.log(error)
-                setAlert({
-                    open: true,
-                    message: 'Error uploading image',
-                    severity: 'error',
-                })
+
+            getDownloadURL(snapshot.ref).then((url) => {
+                setImage(url)
+                console.log(url)
             })
+
+            setCanUpload(false)
+        } catch (error) {
+            console.log(error)
+            setAlert({
+                open: true,
+                message: 'Error uploading image',
+                severity: 'error',
+            })
+        }
         setImageLoading(false)
     }
 

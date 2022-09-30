@@ -18,7 +18,6 @@ export default function Naviagtion() {
 
     useEffect(() => {
         setValue(router.pathname)
-        console.log(router.pathname)
     }, [])
 
     const changeRoute = (event, newValue) => {
@@ -41,7 +40,11 @@ export default function Naviagtion() {
                 backgroundColor: 'rgb(26, 32, 39)',
             }}
         >
-            <BottomNavigation showLabels value={value} onChange={changeRoute}>
+            <BottomNavigation
+                showLabels={false}
+                value={value}
+                onChange={changeRoute}
+            >
                 <BottomNavigationAction
                     label='Add'
                     value='/add'
@@ -54,7 +57,7 @@ export default function Naviagtion() {
                 />
                 <BottomNavigationAction
                     label='Products'
-                    value='products'
+                    value='/products'
                     icon={<Inventory2TwoToneIcon />}
                 />
             </BottomNavigation>

@@ -47,6 +47,8 @@ const index = () => {
             console.log(id)
             await updateDoc(docFirebase(db, 'products', id), {
                 inCart: false,
+                amount: 1,
+                checked: false,
             })
             setProducts((pre) => pre.filter((product) => product.id != id))
         } catch (error) {
@@ -83,9 +85,17 @@ const index = () => {
     if (loading) {
         return (
             <div className='container'>
+                <Skeleton
+                    style={{
+                        borderRadius: 10,
+                    }}
+                    variant='rectangular mb-3'
+                    height={50}
+                    width={220}
+                />
                 <div className='row row-cols-1 row-cols-lg-2'>
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div className='col'>
+                        <div className='col' key={i}>
                             <div className='py-3'>
                                 <Skeleton
                                     style={{
@@ -94,7 +104,6 @@ const index = () => {
                                     }}
                                     variant='rectangular'
                                     height={150}
-                                    key={i}
                                 />
                             </div>
                         </div>
@@ -106,6 +115,15 @@ const index = () => {
 
     return (
         <div className='container'>
+            <h2 className='mb-3'>
+                total:{' '}
+                {products
+                    .map((p) => p.amount * p.price)
+                    .reduce((accumulator, value) => {
+                        return accumulator + value
+                    }, 0)}{' '}
+                €
+            </h2>
             {products.length > 0 ? (
                 <>
                     {products.filter(({ checked }) => !checked).length > 0 ? (
@@ -114,7 +132,7 @@ const index = () => {
                                 .filter(({ checked }) => !checked)
                                 .map((product, index) => (
                                     <Product
-                                        key={index}
+                                        key={product.id}
                                         name={product.name}
                                         price={product.price}
                                         image={product.image}
@@ -142,7 +160,7 @@ const index = () => {
                             .filter(({ checked }) => checked)
                             .map((product, index) => (
                                 <Product
-                                    key={index}
+                                    key={product.id}
                                     name={product.name}
                                     price={product.price}
                                     image={product.image}
